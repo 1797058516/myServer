@@ -7,8 +7,8 @@
 #main.o: main.cpp locker.h threadpool.h http_conn.h
 #	g++ -c main.cpp http_conn.cpp -g
 #
-server: main.cpp threadpool.h http_conn.cpp http_conn.h locker.h 
-	g++ -o server main.cpp threadpool.h http_conn.cpp http_conn.h locker.h -lpthread -g
+server: main.cpp threadpool.h http_conn.cpp http_conn.h locker.h ./log/log.cpp ./log/log.h ./log/block_queue.h
+	g++ -o server main.cpp threadpool.h http_conn.cpp http_conn.h locker.h ./log/log.cpp ./log/log.h ./log/block_queue.h -lpthread -g
 
 clean:
 	rm  -r server

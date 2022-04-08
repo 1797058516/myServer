@@ -41,6 +41,11 @@ public:
     void process();
     bool read();
     bool write();
+    
+    sockaddr_in *get_address()//写日志的时候需要用到
+    {
+        return &m_address;
+    }
 
 private:
     void init();

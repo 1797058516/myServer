@@ -17,8 +17,15 @@
 #include "threadpool.h"
 #include "http_conn.h"
 
+#include "./log/log.h"
+
 #define MAX_FD 65536
 #define MAX_EVENT_NUMBER 10000
+
+
+//#define SYNLOG  //同步写日志
+#define ASYNLOG //异步写日志
+
 
 extern int addfd( int epollfd, int fd, bool one_shot );
 extern int removefd( int epollfd, int fd );
@@ -46,6 +53,14 @@ void show_error( int connfd, const char* info )
 
 int main( int argc, char* argv[] )
 {
+#ifdef ASYNLOG
+    Log::get_instance()->init("ServerLog", 2000, 800000, 8); //异步日志模型
+#endif
+
+#ifdef SYNLOG
+    Log::get_instance()->init("ServerLog", 2000, 800000, 0); //同步日志模型
+#endif
+
     if( argc <= 2 )
     {
         printf( "usage: %s ip_address  port_number\n", basename( argv[0] ) );
@@ -98,11 +113,14 @@ int main( int argc, char* argv[] )
     addfd( epollfd, listenfd, false );
     http_conn::m_epollfd = epollfd;
 
+
+
     while( true )
     {
         int number = epoll_wait( epollfd, events, MAX_EVENT_NUMBER, -1 );
         if ( ( number < 0 ) && ( errno != EINTR ) )
         {
+            LOG_ERROR("%s", "epoll failure");
             printf( "epoll failure\n" );
             break;
         }
@@ -139,6 +157,10 @@ int main( int argc, char* argv[] )
                 /*根据读的结果，决定是将任务添加到线程池，还是关闭连接*/
                 if( users[sockfd].read() )
                 {
+                    //写日志
+                    LOG_INFO("deal with the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
+                    Log::get_instance()->flush();
+                    //若监测到读事件，将该事件放入请求队列
                     pool->append( users + sockfd );
                 }
                 else
@@ -151,7 +173,9 @@ int main( int argc, char* argv[] )
                 /*根据写的结果，决定是否关闭连接*/
                 if( !users[sockfd].write() )
                 {
+                    LOG_INFO("send data to the client(%s)", inet_ntoa(users[sockfd].get_address()->sin_addr));
                     users[sockfd].close_conn();
+                    Log::get_instance()->flush();
                 }
             }
             else

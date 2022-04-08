@@ -62,7 +62,10 @@ public:
     {
         return pthread_mutex_unlock( &m_mutex ) == 0;
     }
-
+    pthread_mutex_t *get()
+    {
+        return &m_mutex;
+    }
 private:
     pthread_mutex_t m_mutex;
 };
@@ -89,6 +92,7 @@ public:
         pthread_mutex_destroy( &m_mutex );
         pthread_cond_destroy( &m_cond );
     }
+    /*
     bool wait()
     {
         int ret = 0;
@@ -97,12 +101,35 @@ public:
         pthread_mutex_unlock( &m_mutex );
         return ret == 0;
     }
-    //唤醒等待条件变量的线程
+    */
+    bool wait(pthread_mutex_t *m_mutex)
+    {
+        int ret = 0;
+        //pthread_mutex_lock( &m_mutex );
+        ret = pthread_cond_wait( &m_cond, m_mutex );
+        //pthread_mutex_unlock( &m_mutex );
+        return ret == 0;
+    }
+
+    bool timewait(pthread_mutex_t *m_mutex, struct timespec t)
+    {
+        int ret = 0;
+        //pthread_mutex_lock(&m_mutex);
+        ret = pthread_cond_timedwait(&m_cond, m_mutex, &t);
+        //pthread_mutex_unlock(&m_mutex);
+        return ret == 0;
+    }
+
+    //唤醒等待条件变量的线程  至少能唤醒一个等待该条件的线程
     bool signal()
     {
         return pthread_cond_signal( &m_cond ) == 0;
     }
-
+//唤醒等待条件变量的所有线程
+    bool broadcast()
+    {
+        return pthread_cond_broadcast(&m_cond) == 0;
+    }
 private:
     pthread_mutex_t m_mutex;
     pthread_cond_t m_cond;
